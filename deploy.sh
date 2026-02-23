@@ -78,34 +78,86 @@ fi
 # Tạo thư mục data nếu chưa có
 mkdir -p data
 
-# Dừng container cũ nếu đang chạy
-if [ "$(docker ps -q -f name=telegram-shop-bot)" ]; then
-    echo -e "${YELLOW}🛑 Đang dừng container cũ...${NC}"
-    docker-compose down
+# Hỏi user muốn chạy Docker hay Node trực tiếp
+echo -e "${YELLOW}Chọn cách chạy:${NC}"
+echo "1) Docker (khuyến nghị)"
+echo "2) Node.js trực tiếp"
+read -p "Nhập lựa chọn (1 hoặc 2): " choice
+
+if [ "$choice" = "2" ]; then
+    # Chạy trực tiếp với Node.js
+    echo -e "${GREEN}📦 Installing dependencies...${NC}"
+    npm install
+    
+    # Dừng process cũ nếu có
+    pkill -f "node src/bot.js" || true
+    
+    echo -e "${GREEN}🚀 Starting bot with PM2...${NC}"
+    
+    # Cài PM2 nếu chưa có
+    if ! command -v pm2 &> /dev/null; then
+        npm install -g pm2
+    fi
+    
+    # Chạy với PM2
+    pm2 delete telegram-bot 2>/dev/null || true
+    pm2 start src/bot.js --name telegram-bot
+    pm2 save
+    pm2 startup
+    
+    echo -e "${GREEN}✅ Bot đã chạy với PM2!${NC}"
+    echo ""
+    echo -e "${GREEN}📊 Xem logs:${NC} pm2 logs telegram-bot"
+    echo -e "${GREEN}🛑 Dừng bot:${NC} pm2 stop telegram-bot"
+    echo -e "${GREEN}🔄 Restart:${NC} pm2 restart telegram-bot"
+    echo -e "${GREEN}📈 Monitor:${NC} pm2 monit"
+    
+else
+    # Chạy với Docker
+    # Dừng container cũ nếu đang chạy
+    if [ "$(docker ps -q -f name=telegram-shop-bot)" ]; then
+        echo -e "${YELLOW}🛑 Đang dừng container cũ...${NC}"
+        docker-compose down
+    fi
+
+    # Build và chạy
+    echo -e "${GREEN}🔨 Building Docker image...${NC}"
+    docker-compose build
+
+    echo -e "${GREEN}🚀 Starting bot...${NC}"
+    docker-compose up -d
 fi
-
-# Build và chạy
-echo -e "${GREEN}🔨 Building Docker image...${NC}"
-docker-compose build
-
-echo -e "${GREEN}🚀 Starting bot...${NC}"
-docker-compose up -d
 
 # Đợi 3 giây để bot khởi động
 sleep 3
 
 # Kiểm tra trạng thái
-if [ "$(docker ps -q -f name=telegram-shop-bot)" ]; then
-    echo -e "${GREEN}✅ Bot đã chạy thành công!${NC}"
-    echo ""
-    echo -e "${GREEN}📊 Xem logs:${NC} docker-compose logs -f"
-    echo -e "${GREEN}🛑 Dừng bot:${NC} docker-compose down"
-    echo -e "${GREEN}🔄 Restart:${NC} docker-compose restart"
-    echo ""
-    echo -e "${YELLOW}📝 Logs hiện tại:${NC}"
-    docker-compose logs --tail=20
+if [ "$choice" = "2" ]; then
+    # Kiểm tra PM2
+    if pm2 list | grep -q "telegram-bot.*online"; then
+        echo -e "${GREEN}✅ Bot đã chạy thành công!${NC}"
+        echo ""
+        echo -e "${YELLOW}📝 Logs hiện tại:${NC}"
+        pm2 logs telegram-bot --lines 20 --nostream
+    else
+        echo -e "${RED}❌ Bot không chạy được. Kiểm tra logs:${NC}"
+        pm2 logs telegram-bot --lines 50 --nostream
+        exit 1
+    fi
 else
-    echo -e "${RED}❌ Bot không chạy được. Kiểm tra logs:${NC}"
-    docker-compose logs
-    exit 1
+    # Kiểm tra Docker
+    if [ "$(docker ps -q -f name=telegram-shop-bot)" ]; then
+        echo -e "${GREEN}✅ Bot đã chạy thành công!${NC}"
+        echo ""
+        echo -e "${GREEN}📊 Xem logs:${NC} docker-compose logs -f"
+        echo -e "${GREEN}🛑 Dừng bot:${NC} docker-compose down"
+        echo -e "${GREEN}🔄 Restart:${NC} docker-compose restart"
+        echo ""
+        echo -e "${YELLOW}📝 Logs hiện tại:${NC}"
+        docker-compose logs --tail=20
+    else
+        echo -e "${RED}❌ Bot không chạy được. Kiểm tra logs:${NC}"
+        docker-compose logs
+        exit 1
+    fi
 fi

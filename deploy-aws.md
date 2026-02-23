@@ -19,26 +19,45 @@ nano .env
 # Điền đầy đủ: BOT_TOKEN, ADMIN_IDS, BINANCE_API_KEY, etc.
 ```
 
-### Bước 3: Chạy 1 lệnh duy nhất
+### Bước 3: Chọn cách chạy
+
+#### Cách 1: Docker (khuyến nghị - ổn định hơn)
 ```bash
 bash deploy.sh
+# Chọn option 1
 ```
 
-Script sẽ tự động:
-- ✅ Cài đặt Docker & Docker Compose (nếu chưa có)
-- ✅ Kiểm tra file .env
-- ✅ Build Docker image
-- ✅ Chạy bot
-- ✅ Hiển thị logs
-
-## 📝 Các lệnh quản lý nhanh
-
+#### Cách 2: Node.js trực tiếp (nhanh hơn, ít tốn RAM)
 ```bash
-bash deploy.sh   # Deploy/Restart bot
-bash logs.sh     # Xem logs real-time
-bash stop.sh     # Dừng bot
-bash update.sh   # Update code mới và restart
-bash backup.sh   # Backup database
+bash start-node.sh
+```
+
+## 📝 Các lệnh quản lý
+
+### Với Docker:
+```bash
+docker-compose up -d      # Khởi động
+docker-compose down       # Dừng
+docker-compose logs -f    # Xem logs
+docker-compose restart    # Restart
+```
+
+### Với Node.js (PM2):
+```bash
+pm2 start src/bot.js --name telegram-bot   # Khởi động
+pm2 stop telegram-bot     # Dừng
+pm2 restart telegram-bot  # Restart
+pm2 logs telegram-bot     # Xem logs
+pm2 monit                 # Monitor real-time
+pm2 list                  # Danh sách process
+```
+
+### Scripts nhanh:
+```bash
+bash start-node.sh   # Chạy với Node.js + PM2
+bash stop-node.sh    # Dừng bot
+bash logs.sh         # Xem logs (Docker)
+bash backup.sh       # Backup database
 ```
 
 ---
@@ -49,7 +68,18 @@ bash backup.sh   # Backup database
 - AWS EC2 instance (Ubuntu/Amazon Linux)
 - File `.env` đã cấu hình đầy đủ
 
-## Cài đặt thủ công Docker (nếu cần)
+## So sánh Docker vs Node.js trực tiếp
+
+| Tiêu chí | Docker | Node.js + PM2 |
+|----------|--------|---------------|
+| Cài đặt | Phức tạp hơn | Đơn giản |
+| RAM | ~200MB | ~50MB |
+| Khởi động | Chậm hơn | Nhanh |
+| Ổn định | Cao | Cao |
+| Cập nhật | Rebuild image | Restart nhanh |
+| Khuyến nghị | Production | Development/VPS nhỏ |
+
+## Cài đặt thủ công
 
 ### Ubuntu/Debian:
 ```bash

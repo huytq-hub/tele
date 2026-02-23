@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   telegram-bot:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
     container_name: telegram-shop-bot
     restart: unless-stopped
     env_file:
