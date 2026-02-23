@@ -95,14 +95,21 @@ function startPaymentChecker(bot) {
           });
         }
         
-        if (chatId) 
-          bot.sendMessage(chatId, msg).catch(() => { });
+        // Gửi tin nhắn cho user với error handling
+        if (chatId) {
+          bot.sendMessage(chatId, msg).catch(err => {
+            console.log(`Failed to send message to ${chatId}: ${err.message}`);
+          });
+        }
         
+        // Gửi thông báo cho admin
         config.ADMIN_IDS.forEach(id => {
           const adminMsg = method === 'bank'
             ? `💰 DEPOSIT\n👤 ${userId}\n💵 ${amount} ${displayCurrency} → ${creditAmount} USDT\n📱 ${method}`
             : `💰 DEPOSIT\n👤 ${userId}\n💵 ${amount} ${displayCurrency}\n📱 ${method}`;
-          bot.sendMessage(id, adminMsg).catch(() => { });
+          bot.sendMessage(id, adminMsg).catch(err => {
+            console.log(`Failed to send admin notification to ${id}: ${err.message}`);
+          });
         });
       });
     } catch (err) {
