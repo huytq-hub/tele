@@ -10,6 +10,9 @@ const Events = require('../services/events');
 const { formatPrice, formatCredits, getFullName, getAdminUsername, formatNumber } = require('../utils/helpers');
 const { buildShopKeyboard, buildProductKeyboard, buildDepositKeyboard, buildDepositAmountKeyboard } = require('../utils/keyboard');
 const i18n = require('../locales');
+const path = require('path');
+
+const BINANCE_QR_PATH = path.resolve(__dirname, '../../public/bnc_qr.png');
 
 const userState = new Map();
 
@@ -246,6 +249,10 @@ async function handleDepositMethod(bot, query) {
     return bot.answerCallbackQuery(query.id, { text: '🚫 Chức năng chuyển khoản tạm thời không khả dụng', show_alert: true });
   }
 
+  if (method === 'binance' && !Payment.binance.isConfigured()) {
+    return bot.answerCallbackQuery(query.id, { text: '🚫 Binance Pay chưa được cấu hình', show_alert: true });
+  }
+
   const currency = method === 'binance' ? 'USDT' : 'VND';
   const methodName = method === 'binance' ? 'Binance Pay' : 'Bank Transfer';
 
@@ -286,14 +293,22 @@ async function handleDepositAmount(bot, query) {
     [{ text: t('cancel'), callback_data: `deposit_cancel_${deposit.paymentCode}` }]
   ];
 
-  const photo = isBinance ? './public/bnc_qr.png' : info.qrUrl;
+  const photo = isBinance ? BINANCE_QR_PATH : info.qrUrl;
 
   await bot.deleteMessage(chatId, query.message.message_id);
-  bot.sendPhoto(chatId, photo, {
-    caption: text,
-    parse_mode: 'Markdown',
-    reply_markup: { inline_keyboard: keyboard }
-  });
+  try {
+    await bot.sendPhoto(chatId, photo, {
+      caption: text,
+      parse_mode: 'Markdown',
+      reply_markup: { inline_keyboard: keyboard }
+    });
+  } catch (err) {
+    console.error('Deposit sendPhoto error:', err.message);
+    await bot.sendMessage(chatId, text, {
+      parse_mode: 'Markdown',
+      reply_markup: { inline_keyboard: keyboard }
+    });
+  }
   bot.answerCallbackQuery(query.id).catch(() => { });
 }
 

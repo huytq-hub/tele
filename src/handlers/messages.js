@@ -10,6 +10,9 @@ const { buildAdminProductDetailKeyboard } = require('../utils/keyboard');
 const { userState } = require('./callbacks');
 const { getAdminState } = require('./admin');
 const i18n = require('../locales');
+const path = require('path');
+
+const BINANCE_QR_PATH = path.resolve(__dirname, '../../public/bnc_qr.png');
 
 function register(bot) {
   bot.on('message', async (msg) => {
@@ -181,11 +184,19 @@ async function handleCustomDeposit(bot, msg, state) {
   ];
 
   if (state.method === 'binance') {
-    bot.sendPhoto(chatId, './public/bnc_qr.png', {
-      caption: text,
-      parse_mode: 'Markdown',
-      reply_markup: { inline_keyboard: keyboard }
-    });
+    try {
+      await bot.sendPhoto(chatId, BINANCE_QR_PATH, {
+        caption: text,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: keyboard }
+      });
+    } catch (err) {
+      console.error('Deposit sendPhoto error:', err.message);
+      await bot.sendMessage(chatId, text, {
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: keyboard }
+      });
+    }
   } else if (state.method === 'bank' && info.qrUrl) {
     bot.sendPhoto(chatId, info.qrUrl, {
       caption: text,
