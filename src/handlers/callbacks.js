@@ -11,6 +11,7 @@ const { formatPrice, formatCredits, getFullName, getAdminUsername, formatNumber 
 const { buildShopKeyboard, buildProductKeyboard, buildDepositKeyboard, buildDepositAmountKeyboard } = require('../utils/keyboard');
 const i18n = require('../locales');
 const path = require('path');
+const fs = require('fs');
 
 const BINANCE_QR_PATH = path.resolve(__dirname, '../../public/bnc_qr.png');
 
@@ -293,15 +294,24 @@ async function handleDepositAmount(bot, query) {
     [{ text: t('cancel'), callback_data: `deposit_cancel_${deposit.paymentCode}` }]
   ];
 
-  const photo = isBinance ? BINANCE_QR_PATH : info.qrUrl;
+  const photo = isBinance
+    ? (fs.existsSync(BINANCE_QR_PATH) ? fs.createReadStream(BINANCE_QR_PATH) : null)
+    : info.qrUrl;
 
   await bot.deleteMessage(chatId, query.message.message_id);
   try {
-    await bot.sendPhoto(chatId, photo, {
-      caption: text,
-      parse_mode: 'Markdown',
-      reply_markup: { inline_keyboard: keyboard }
-    });
+    if (photo) {
+      await bot.sendPhoto(chatId, photo, {
+        caption: text,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: keyboard }
+      });
+    } else {
+      await bot.sendMessage(chatId, text, {
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: keyboard }
+      });
+    }
   } catch (err) {
     console.error('Deposit sendPhoto error:', err.message);
     await bot.sendMessage(chatId, text, {
